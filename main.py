@@ -17,7 +17,7 @@ def display_file_info(event):
         return
 
     file_path = node_paths[selected_nodes[0]]
-    if not file_path.is_file():
+    if not file_path.exists():
         return
 
     file_info = file_path.stat()
@@ -29,12 +29,25 @@ def display_file_info(event):
     mode = file_info.st_mode
     perms = f"{'r' if mode & 0o400 else '-'}{'w' if mode & 0o200 else '-'}{'x' if mode & 0o100 else '-'}"
 
+    # Adaptation des valeurs selon qu'il s'agit d'un dossier ou d'un fichier
+    if file_path.is_dir():
+        file_type = "Dossier"
+        # Calcule le nombre d'éléments contenus dans le répertoire
+        try:
+            item_count = len(list(file_path.iterdir()))
+            size_display = f"{item_count} élément(s)"
+        except PermissionError:
+            size_display = "Accès refusé"
+    else:
+        file_type = file_path.suffix or "Fichier sans extension"
+        size_display = f"{file_info.st_size} octets"
+
     # Liste d'associations (champ Entry, valeur à insérer)
     fields_to_update = [
-        (info_entry1, file_path.name),
+        (info_entry1, file_path.name or str(file_path)),
         (info_entry2, str(file_path.resolve())),
-        (info_entry3, file_path.suffix or "Fichier sans extension"),
-        (info_entry4, f"{file_info.st_size} octets"),
+        (info_entry3, file_type),
+        (info_entry4, size_display),
         (info_entry5, mod_time),
         (info_entry6, perms)
     ]
@@ -89,9 +102,6 @@ menu_bar.add_cascade(label="File", menu=file_menu) #ajouter File au menu
 window.config(menu=menu_bar)
 
 maintree_frame = LabelFrame(window)
-maintree_frame.grid(row=0, column=0) # placement s'étire dans toutes direction
-maintree_frame.rowconfigure(0, weight=1) # ligne du treeview
-maintree_frame.columnconfigure(0, weight=1) # première colonne de la frame
 style = ttk.Style() #pour mettre un Style au ttkvieux
 maintree_frame.pack(side=LEFT, fill=BOTH, pady=20, padx=10)
 
@@ -112,8 +122,6 @@ maininfo_frame = LabelFrame(window)
 maininfo_frame.pack(side=LEFT, fill=BOTH, pady=20, padx=10)
 
 info_frame = LabelFrame(maininfo_frame, text="Informations")
-info_frame.rowconfigure(0, weight=1) # ligne du treeview
-info_frame.columnconfigure(0, weight=1) # première colonne de la frame
 info_frame.pack(side=LEFT, expand=True, fill=BOTH)
 
 mainproject_frame = LabelFrame(window)
