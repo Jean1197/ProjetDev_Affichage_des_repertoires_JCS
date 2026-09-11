@@ -3,10 +3,10 @@
 # 21.08.2026
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk # pour le treeview
 from tkinter import *
-from tkinter import filedialog
-from pathlib import Path
+from tkinter import filedialog # boite dialogue pour chercher un répertoire
+from pathlib import Path # fonctions de répertoire
 from datetime import datetime
 
 node_paths = {} #garder les chemins complets
@@ -56,8 +56,6 @@ def display_file_info(event):
     for entry, value in fields_to_update:
         entry.delete(0, tk.END)
         entry.insert(0, value)
-
-# afficher un répertoire
 
 def display_directory():
     tree.delete(*tree.get_children()) # vider le treeview
