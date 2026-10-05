@@ -1,4 +1,4 @@
-# Projet Python Système : Affichage des répertoires + autre
+# Projet Python Système : Affichage des répertoires + Moniteur CPU
 # Jean-Christophe Serrano
 # 21.08.2026
 
@@ -70,9 +70,7 @@ def display_directory():
     # appeler la recherche des noeuds enfants
     populate_tree(tree, root_node, root_folder)
 
-    # afficher le tableau des node
-    for node, path in node_paths.items():
-        print(node, ":", path)
+
 
 # recherche des noeuds enfants (récursif)
 def populate_tree(tree, parent, folder):
@@ -157,5 +155,94 @@ info_permissions = ttk.Label(info_frame, text="Permissions:")
 info_permissions.pack(anchor="w", padx=5, pady=10)
 info_entry6 = tk.Entry(info_frame, width=45)
 info_entry6.pack(anchor="w", padx=8)
+
+
+# ======================================================================
+# AJOUT : moniteur CPU dans project_frame (pip install psutil) aidé par l'IA (claude)
+# ======================================================================
+import psutil
+
+class CpuMonitorFrame(ttk.Frame):
+    INTERVALLE_MS = 1000   # rafraîchissement (ms)
+    HISTORIQUE = 60        # nombre de points du graphique
+    HAUTEUR = 100          # hauteur du graphique
+
+    def __init__(self, parent):
+        super().__init__(parent, padding=10)
+        self.historique = [0.0] * self.HISTORIQUE
+
+        # Pourcentage global + infos
+        self.lbl_total = ttk.Label(self, text="CPU : 0 %", font=("Segoe UI", 20, "bold"))
+        self.lbl_total.pack(anchor="w")
+        self.lbl_infos = ttk.Label(self, text="")
+        self.lbl_infos.pack(anchor="w", pady=(0, 8))
+
+        # Graphique (s'adapte à la largeur disponible)
+        self.canvas = tk.Canvas(self, height=self.HAUTEUR, bg="#111", highlightthickness=1, highlightbackground="#444")
+        self.canvas.pack(fill="x")
+
+        # Barres par cœur (2 colonnes pour gagner de la place)
+        ttk.Label(self, text="Utilisation par cœur",
+                  font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 2))
+        zone = ttk.Frame(self)
+        zone.pack(fill="x")
+        self.barres, self.labels_coeurs = [], []
+        nb = psutil.cpu_count(logical=True)
+        par_colonne = (nb + 1) // 2
+        for i in range(nb):
+            ligne, col = i % par_colonne, (i // par_colonne) * 3
+            ttk.Label(zone, text=f"C{i}", width=4).grid(row=ligne, column=col, sticky="w")
+            barre = ttk.Progressbar(zone, length=140, maximum=100)
+            barre.grid(row=ligne, column=col + 1, padx=3, pady=1)
+            lbl = ttk.Label(zone, text="0 %", width=5, anchor="e")
+            lbl.grid(row=ligne, column=col + 2, padx=(0, 12))
+            self.barres.append(barre)
+            self.labels_coeurs.append(lbl)
+
+        psutil.cpu_percent(interval=None, percpu=True)  # amorçage de psutil
+        self.after(self.INTERVALLE_MS, self.actualiser)
+
+    def actualiser(self):
+        par_coeur = psutil.cpu_percent(interval=None, percpu=True)
+        total = sum(par_coeur) / len(par_coeur)
+
+        self.lbl_total.config(text=f"CPU : {total:.1f} %")
+        texte = (f"{psutil.cpu_count(logical=False)} cœurs physiques / "
+                 f"{psutil.cpu_count(logical=True)} logiques")
+        freq = psutil.cpu_freq()
+        if freq:
+            texte += f"  •  {freq.current:.0f} MHz"
+        self.lbl_infos.config(text=texte)
+
+        for barre, lbl, v in zip(self.barres, self.labels_coeurs, par_coeur):
+            barre["value"] = v
+            lbl.config(text=f"{v:.0f} %")
+
+        self.historique = (self.historique + [total])[-self.HISTORIQUE:]
+        self.tracer()
+        self.after(self.INTERVALLE_MS, self.actualiser)
+
+    def tracer(self):
+        c = self.canvas
+        c.delete("all")
+        largeur = max(c.winfo_width(), 100)
+        h = self.HAUTEUR
+        for pct in (25, 50, 75):
+            y = h - h * pct / 100
+            c.create_line(0, y, largeur, y, fill="#333", dash=(2, 4))
+            c.create_text(4, y - 6, text=f"{pct}%", fill="#666",
+                          anchor="w", font=("Segoe UI", 7))
+        pas = largeur / (self.HISTORIQUE - 1)
+        pts = []
+        for i, v in enumerate(self.historique):
+            pts.extend((i * pas, h - h * v / 100))
+        c.create_polygon(0, h, *pts, largeur, h, fill="#1b4d2e", outline="")
+        c.create_line(*pts, fill="#3ddc84", width=2)
+
+
+cpu_monitor = CpuMonitorFrame(project_frame)
+cpu_monitor.pack(fill=BOTH, expand=True)
+# ======================================================================
+
 
 window.mainloop()
