@@ -8,6 +8,7 @@ from tkinter import *
 from tkinter import filedialog # boite dialogue pour chercher un répertoire
 from pathlib import Path # fonctions de répertoire
 from datetime import datetime
+import psutil # cette bibliothèque permet de surveiller et de gérer les processus ainsi que d'obtenir des informations sur l'utilisation des ressources système telles que le CPU
 
 node_paths = {} #garder les chemins complets
 
@@ -160,7 +161,6 @@ info_entry6.pack(anchor="w", padx=8)
 # ======================================================================
 # AJOUT : moniteur CPU dans project_frame (pip install psutil) aidé par l'IA (claude)
 # ======================================================================
-import psutil
 
 class CpuMonitorFrame(ttk.Frame):
     INTERVALLE_MS = 1000   # rafraîchissement (ms)
@@ -169,6 +169,9 @@ class CpuMonitorFrame(ttk.Frame):
 
     def __init__(self, parent):
         super().__init__(parent, padding=10)
+        # Liste des dernières valeurs du CPU global (en %), initialisée à 0.
+        # Chaque seconde, on ajoute une valeur à la fin et on retire la plus ancienne : c'est ce qui donne l'effet de courbe qui défile.
+
         self.historique = [0.0] * self.HISTORIQUE
 
         # Pourcentage global + infos
@@ -187,9 +190,15 @@ class CpuMonitorFrame(ttk.Frame):
         zone = ttk.Frame(self)
         zone.pack(fill="x")
         self.barres, self.labels_coeurs = [], []
-        nb = psutil.cpu_count(logical=True)
-        par_colonne = (nb + 1) // 2
+        nb = psutil.cpu_count(logical=True) # nombre de cœurs logiques
+        par_colonne = (nb + 1) // 2 # nombre de lignes par colonne (arrondi au supérieur)
+
+        # nombre de lignes par colonne (arrondi au supérieur)
         for i in range(nb):
+
+            # ligne : position verticale dans la colon
+            # col   : 0 pour la 1re colonne, 3 pour la 2e (chaque cœur utilise 3 cellules :
+            # nom, barre, pourcentage)
             ligne, col = i % par_colonne, (i // par_colonne) * 3
             ttk.Label(zone, text=f"C{i}", width=4).grid(row=ligne, column=col, sticky="w")
             barre = ttk.Progressbar(zone, length=140, maximum=100)
@@ -203,6 +212,10 @@ class CpuMonitorFrame(ttk.Frame):
         self.after(self.INTERVALLE_MS, self.actualiser)
 
     def actualiser(self):
+        """Lit les valeurs du CPU et met à jour tous les éléments affichés.
+        Cette méthode se rappelle elle-même à la fin avec `after`, ce qui crée
+        une boucle de rafraîchissement sans bloquer l'interface (contrairement
+        à un `while True` ou un `time.sleep`)."""
         par_coeur = psutil.cpu_percent(interval=None, percpu=True)
         total = sum(par_coeur) / len(par_coeur)
 
@@ -223,6 +236,13 @@ class CpuMonitorFrame(ttk.Frame):
         self.after(self.INTERVALLE_MS, self.actualiser)
 
     def tracer(self):
+        """Redessine entièrement le graphique de l'historique du CPU.
+
+                Le Canvas est vidé puis redessiné à chaque appel :
+                  1. les lignes de repère (25 %, 50 %, 75 %),
+                  2. la zone remplie sous la courbe,
+                  3. la courbe elle-même.
+                """
         c = self.canvas
         c.delete("all")
         largeur = max(c.winfo_width(), 100)
@@ -243,6 +263,5 @@ class CpuMonitorFrame(ttk.Frame):
 cpu_monitor = CpuMonitorFrame(project_frame)
 cpu_monitor.pack(fill=BOTH, expand=True)
 # ======================================================================
-
 
 window.mainloop()
