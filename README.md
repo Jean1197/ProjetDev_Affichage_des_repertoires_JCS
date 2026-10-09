@@ -53,6 +53,6 @@ git clone https://github.com/Jean1197/ProjetDev_Affichage_des_repertoires_JCS
 
 ## Notes
 
-- Le module de monitoring CPU (partie commentée `AJOUT`) a été développé avec
-  l'aide de Claude (Anthropic).
 - La récursion sur de très gros répertoires peut prendre du temps.
+- Le module de monitoring CPU (partie commentée `AJOUT`) a été développé avec
+  l'aide de Claude (Anthropic). Le reste a été développé avec l'aide des fichiers python fournis par le professeur et à      l'aide de mes connaissances.
