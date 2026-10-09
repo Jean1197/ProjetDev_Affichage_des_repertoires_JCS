@@ -28,7 +28,7 @@ suivre en temps réel la performance du CPU.
 - [psutil] pour le moniteur CPU :
 
 ```bash
-  pip install psutil
+pip install psutil
 ```
 
 ## Installation
